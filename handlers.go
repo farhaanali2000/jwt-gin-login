@@ -77,14 +77,49 @@ func Login(c *gin.Context) {
 
 }
 
-
 func Home(c *gin.Context) {
 	cookie, err := c.Cookie("token")
 	if err != nil {
 		if err == http.ErrNoCookie {
-			c.JSON(http.StatusUnauthorized, gin.H {
-				"status": "unautorized",
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"status": "unauthorized",
 			})
+			return
 		}
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": "bad request",
+		})
+		return
 	}
+
+	tokenStr := cookie
+	claims := &Claims{}
+
+	tkn, err := jwt.ParseWithClaims(tokenStr, claims,
+		func(t *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		})
+
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"status": "unauthorized",
+			})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status": "Bad request",
+		})
+		return
+	}
+
+	if !tkn.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status": "unauthorized",
+		})
+	}
+
+	c.JSON(200, gin.H{
+		"username": claims.Username,
+	})
 }
